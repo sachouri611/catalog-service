@@ -19,6 +19,8 @@ jobs:
           semgrep scan --config .semgrep/core-providers.yaml --error --sarif > semgrep.sarif
       - name: Write verdict
         if: always()
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os
@@ -29,7 +31,7 @@ jobs:
             'repo': os.environ['GITHUB_REPOSITORY'],
             'workflow': os.environ['GITHUB_WORKFLOW'],
             'run_id': os.environ['GITHUB_RUN_ID'],
-            'head_sha': os.environ['GITHUB_EVENT_PULL_REQUEST_HEAD_SHA'],
+            'head_sha': os.environ['HEAD_SHA'],
             'merge_sha': os.environ['GITHUB_SHA'],
             'rule_sha256': hashlib.sha256(rule).hexdigest(),
             'sarif_sha256': hashlib.sha256(sarif).hexdigest(),
