@@ -1,0 +1,22 @@
+name: qodo-compliance-block
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  block:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block on compliance label
+        run: |
+          LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+          echo "labels: $LABELS"
+          if echo "$LABELS" | grep -q "Failed compliance check"; then
+            echo "::error::PR carries 'Failed compliance check' label — merge blocked"
+            exit 1
+          fi
+          echo "no compliance label — pass"
+        env:
+          GH_TOKEN: ${{ github.token }}
