@@ -1,0 +1,62 @@
+name: gate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep scan
+        id: scan
+        continue-on-error: true
+        run: |
+          pipx install semgrep
+          semgrep scan --config .semgrep/core-providers.yaml --error --sarif > semgrep.sarif
+      - name: Write verdict
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          rule = open('.semgrep/core-providers.yaml', 'rb').read()
+          sarif = open('semgrep.sarif', 'rb').read()
+          findings = json.loads(sarif)['runs'][0]['results']
+          verdict = {
+            'repo': os.environ['GITHUB_REPOSITORY'],
+            'workflow': os.environ['GITHUB_WORKFLOW'],
+            'run_id': os.environ['GITHUB_RUN_ID'],
+            'head_sha': os.environ['GITHUB_EVENT_PULL_REQUEST_HEAD_SHA'],
+            'merge_sha': os.environ['GITHUB_SHA'],
+            'rule_sha256': hashlib.sha256(rule).hexdigest(),
+            'sarif_sha256': hashlib.sha256(sarif).hexdigest(),
+            'findings': len(findings),
+            'verdict': 'fail' if findings else 'pass',
+          }
+          json.dump(verdict, open('verdict.json', 'w'), indent=2)
+          print(json.dumps(verdict, indent=2))
+          PY
+      - name: Upload SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif
+          path: semgrep.sarif
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verdict
+          path: verdict.json
+      - name: Attest verdict
+        if: always()
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: verdict.json
+      - name: Gate
+        if: always()
+        run: |
+          python3 -c "import json; v=json.load(open('verdict.json')); raise SystemExit(1 if v['verdict']=='fail' else 0)"

@@ -1,0 +1,21 @@
+rules:
+  - id: core-must-not-import-providers
+    message: >-
+      src/core must not import from src/providers (static or dynamic).
+      Rule: docs/architecture.md, rule 1.
+    severity: ERROR
+    languages: [javascript, typescript]
+    paths:
+      include:
+        - /src/core/**
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import $X from "$PROVIDER"
+          - pattern: |
+              import("$PROVIDER")
+          - pattern: |
+              require("$PROVIDER")
+      - metavariable-regex:
+          metavariable: $PROVIDER
+          regex: ^(\.\./)+providers(/|$)
