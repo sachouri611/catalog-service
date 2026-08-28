@@ -5,6 +5,6 @@
   "description": "Internal product catalog service",
   "type": "module",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test"
   }
 }
