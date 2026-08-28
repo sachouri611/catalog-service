@@ -13,8 +13,6 @@ rules:
           - pattern: |
               import $X from "$PROVIDER"
           - pattern: |
-              import("$PROVIDER")
-          - pattern: |
               require("$PROVIDER")
       - metavariable-regex:
           metavariable: $PROVIDER
